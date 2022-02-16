@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Actions from './Actions';
 import TopInfo from './TopInfo';
+import ContractInfo from './ContractInfo';
 import Transactions from './Transactions';
 
 const Dashboard = () => {
@@ -13,6 +14,7 @@ const Dashboard = () => {
               <div className='card rounded border-0 bg-primary'>
                 <div className='card-body text-center p-4'>
                   <TopInfo />
+                  <ContractInfo />
                   <Actions />
                 </div>
               </div>
