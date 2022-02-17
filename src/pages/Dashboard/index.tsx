@@ -1,5 +1,5 @@
 import * as React from 'react';
-import Actions from './Actions';
+// import Actions from './Actions';
 import TopInfo from './TopInfo';
 import ContractInfo from './ContractInfo';
 import Transactions from './Transactions';
@@ -15,7 +15,7 @@ const Dashboard = () => {
                 <div className='card-body text-center p-4'>
                   <TopInfo />
                   <ContractInfo />
-                  <Actions />
+                  {/* <Actions /> */}
                 </div>
               </div>
               <Transactions />

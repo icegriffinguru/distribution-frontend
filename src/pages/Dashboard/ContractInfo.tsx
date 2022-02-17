@@ -22,6 +22,7 @@ import {
   BigUIntValue,
   Balance
 } from '@elrondnetwork/erdjs';
+import BigNumber from '@elrondnetwork/erdjs/node_modules/bignumber.js/bignumber.js';
 import { contractAddress } from 'config';
 
 const ContractInfo = () => {
@@ -111,12 +112,43 @@ const ContractInfo = () => {
 
     await refreshAccount();
 
+    const txName = 'updatePrice';
     const { sessionId /*, error*/ } = await sendTransactions({
       transactions: tx,
       transactionsDisplayInfo: {
-        processingMessage: 'Processing Ping transaction',
-        errorMessage: 'An error has occured during Ping',
-        successMessage: 'Ping transaction successful'
+        processingMessage: 'Processing ' + txName + ' transaction',
+        errorMessage: 'An error has occured during ' + txName,
+        successMessage: txName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
+  const sendUpdateBuyLimitTransaction = async (e: any) => {
+    e.preventDefault();
+    if (newBuyLimit !== 0 && !newBuyLimit){
+      alert('Buy Limit should be set.');
+      return;
+    }
+
+    const tx = contract.call({
+      func: new ContractFunction('updateBuyLimit'),
+      gasLimit: new GasLimit(5000000),
+      args: [new BigUIntValue(new BigNumber(newBuyLimit))]
+    });
+
+    await refreshAccount();
+
+    const txName = 'updateBuyLimit';
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + txName + ' transaction',
+        errorMessage: 'An error has occured during ' + txName,
+        successMessage: txName + ' transaction successful'
       },
       redirectAfterSign: false
     });
@@ -150,6 +182,11 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Price:</span>
         <input type="number" onChange={(e) => setNewTokenPrice(parseFloat(e.target.value))} />
         <button className='btn' onClick={sendUpdatePriceTransaction}>Update</button>
+      </div>
+      <div className='mb-1' >
+        <span className='opacity-6 mr-1'>Buy Limit:</span>
+        <input type="number" onChange={(e) => setNewBuyLimit(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendUpdateBuyLimitTransaction}>Update</button>
       </div>
     </div>
   );
