@@ -45,12 +45,13 @@ const ContractInfo = () => {
 
   // console.log('network', network);
 
-  const /*transactionSessionId*/ [, setTransactionSessionId] = React.useState<string | null>(null);
+  const /*transactionSessionId*/ [transactionSessionId, setTransactionSessionId] = React.useState<string | null>(null);
 
   const [tokenId, setTokenId] = React.useState<string>();
   const [tokenPrice, setTokenPrice] = React.useState<number>();
   const [buyLimit, setBuyLimit] = React.useState<number>();
   const [esdtBalance, setEsdtBalance] = React.useState<string>();
+  const [accountEsdtBalance, setAccountEsdtBalance] = React.useState<string>();
 
   const [newTokenPrice, setNewTokenPrice] = React.useState<number>();
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
@@ -115,6 +116,8 @@ const ContractInfo = () => {
   React.useEffect(() => {
     if (!tokenId) return;
     console.log('tokenId', tokenId);
+
+    // contract balance
     getEsdtBalance({
       apiAddress: gatewayUrl,
       address: contractAddress,
@@ -134,6 +137,29 @@ const ContractInfo = () => {
         decoded += ' ' + tokenSymbol;
         console.log('decoded', decoded);
         setEsdtBalance(decoded);
+      }
+    });
+
+    // acccount balance
+    getEsdtBalance({
+      apiAddress: gatewayUrl,
+      address: address,
+      tokenId: tokenId,
+      timeout: 3000
+    }).then(({ data, success }) => {
+      console.log('success', success);
+      console.log('data', data);
+      if (success && !!data.tokenData) {
+        let decoded;
+        decoded = data.tokenData.balance;
+        decoded = Egld.raw(new BigNumber(decoded)).toDenominated();
+        decoded = parseFloat(decoded).toString();
+
+        const tokenSymbol = tokenId.split('-')[0];
+
+        decoded += ' ' + tokenSymbol;
+        console.log('decoded', decoded);
+        setAccountEsdtBalance(decoded);
       }
     });
   }, [tokenId, hasPendingTransactions]);
@@ -411,6 +437,17 @@ const ContractInfo = () => {
 
   return (
     <div className='text-white' data-testid='topInfo'>
+      <hr />
+      <div>
+        <h3 className='py-2'>
+          Account Information
+        </h3>
+      </div>
+      <div className='mb-4'>
+        <span className='opacity-6 mr-1'>ESDT Balance:</span>
+        <span data-testid='accountEsdtBalance'> {accountEsdtBalance}</span>
+      </div>
+
       <hr />
       <div>
         <h3 className='py-2'>
