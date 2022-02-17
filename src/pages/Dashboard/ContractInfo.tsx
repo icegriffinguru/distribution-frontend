@@ -44,30 +44,56 @@ const ContractInfo = () => {
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
 
   React.useEffect(() => {
-    (async () => {
-      let queryResponse, decoded;
-      queryResponse = await contract.runQuery(proxy, {
-        func: new ContractFunction('getDistributableTokenId')
-      });
-      decoded = Buffer.from(queryResponse.returnData[0], 'base64').toString();
-      setTokenId(decoded);
+    let query, decoded;
 
-      queryResponse = await contract.runQuery(proxy, {
-        func: new ContractFunction('getDistributablePrice')
+    query = new Query({
+      address: new Address(contractAddress),
+      func: new ContractFunction('getDistributableTokenId')
+    });
+    proxy
+      .queryContract(query)
+      .then(({ returnData }) => {
+        const [encoded] = returnData;
+        decoded = Buffer.from(encoded, 'base64').toString();
+        setTokenId(decoded);
+      })
+      .catch((err) => {
+        console.error('Unable to call VM query', err);
       });
-      decoded = Buffer.from(queryResponse.returnData[0], 'base64').toString('hex');
-      decoded = parseInt(decoded, 16);
-      decoded = Egld.raw(decoded).toDenominated();
-      decoded = parseFloat(decoded);
-      setTokenPrice(decoded);
 
-      queryResponse = await contract.runQuery(proxy, {
-        func: new ContractFunction('getBuyLimit')
+    query = new Query({
+      address: new Address(contractAddress),
+      func: new ContractFunction('getDistributablePrice')
+    });
+    proxy
+      .queryContract(query)
+      .then(({ returnData }) => {
+        const [encoded] = returnData;
+        decoded = Buffer.from(encoded, 'base64').toString('hex');
+        decoded = parseInt(decoded, 16);
+        decoded = Egld.raw(decoded).toDenominated();
+        decoded = parseFloat(decoded);
+        setTokenPrice(decoded);
+      })
+      .catch((err) => {
+        console.error('Unable to call VM query', err);
       });
-      decoded = Buffer.from(queryResponse.returnData[0], 'base64').toString('hex');
+
+    query = new Query({
+      address: new Address(contractAddress),
+      func: new ContractFunction('getBuyLimit')
+    });
+    proxy
+      .queryContract(query)
+      .then(({ returnData }) => {
+        const [encoded] = returnData;
+        decoded = Buffer.from(encoded, 'base64').toString('hex');
       decoded = parseInt(decoded, 16);
       setBuyLimit(decoded);
-    })();
+      })
+      .catch((err) => {
+        console.error('Unable to call VM query', err);
+      });
   }, [hasPendingTransactions]);
 
   const sendUpdatePriceTransaction = async (e: any) => {
