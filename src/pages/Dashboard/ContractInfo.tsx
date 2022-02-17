@@ -5,16 +5,22 @@ import {
   useGetPendingTransactions,
   refreshAccount,
   useGetNetworkConfig,
-  DappUI
+  DappUI,
+  getAccountProvider
 } from '@elrondnetwork/dapp-core';
 import {
   Address,
   AddressValue,
+  Nonce,
   ContractFunction,
   ProxyProvider,
+  WalletProvider,
   Query,
   SmartContract,
-  Egld
+  Egld,
+  GasLimit,
+  BigUIntValue,
+  Balance
 } from '@elrondnetwork/erdjs';
 import { contractAddress } from 'config';
 
@@ -24,27 +30,20 @@ const ContractInfo = () => {
   const { network } = useGetNetworkConfig();
   const proxy = new ProxyProvider(network.apiAddress);
   const contract = new SmartContract({ address: new Address(contractAddress) });
+  const { sendTransactions } = transactionServices;
+
+  console.log('network', network);
+
+  const /*transactionSessionId*/ [, setTransactionSessionId] = React.useState<string | null>(null);
 
   const [tokenId, setTokenId] = React.useState<string>();
   const [tokenPrice, setTokenPrice] = React.useState<number>();
   const [buyLimit, setBuyLimit] = React.useState<number>();
 
-  React.useEffect(() => {
-    // const query = new Query({
-    //   address: new Address(contractAddress),
-    //   func: new ContractFunction('getDistributableTokenId'),
-    // });
+  const [newTokenPrice, setNewTokenPrice] = React.useState<number>();
+  const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
 
-    // proxy
-    //   .queryContract(query)
-    //   .then(({ returnData }) => {
-    //     const [encoded] = returnData;
-    //     const decoded = Buffer.from(encoded, 'base64').toString();
-    //     setTokenId(decoded);
-    //   })
-    //   .catch((err) => {
-    //     console.error('getDistributableTokenId failed.', err);
-    //   });
+  React.useEffect(() => {
     (async () => {
       let queryResponse, decoded;
       queryResponse = await contract.runQuery(proxy, {
@@ -71,6 +70,35 @@ const ContractInfo = () => {
     })();
   }, [hasPendingTransactions]);
 
+  const sendUpdatePriceTransaction = async (e: any) => {
+    e.preventDefault();
+    if (!newTokenPrice){
+      alert('Token price should be greater than 0.');
+      return;
+    }
+
+    const tx = contract.call({
+      func: new ContractFunction('updatePrice'),
+      gasLimit: new GasLimit(5000000),
+      args: [new BigUIntValue(Balance.egld(newTokenPrice).valueOf())]
+    });
+
+    await refreshAccount();
+
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing Ping transaction',
+        errorMessage: 'An error has occured during Ping',
+        successMessage: 'Ping transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
   return (
     <div className='text-white' data-testid='topInfo'>
       <hr />
@@ -90,6 +118,12 @@ const ContractInfo = () => {
       <div className='mb-4'>
         <span className='opacity-6 mr-1'>Buy Limit:</span>
         <span data-testid='buyLimit'> {buyLimit}</span>
+      </div>
+      <hr />
+      <div className='mb-1' >
+        <span className='opacity-6 mr-1'>Price:</span>
+        <input type="number" onChange={(e) => setNewTokenPrice(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendUpdatePriceTransaction}>Update</button>
       </div>
     </div>
   );
