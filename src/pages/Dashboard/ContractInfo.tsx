@@ -26,7 +26,14 @@ import {
   TransactionPayload
 } from '@elrondnetwork/erdjs';
 import BigNumber from '@elrondnetwork/erdjs/node_modules/bignumber.js/bignumber.js';
-import { contractAddress } from 'config';
+import {
+  stringToHex,
+  decimalToHex
+} from '../../utils/encode';
+import  {
+  getEsdtBalance
+} from 'apiRequests';
+import { contractAddress, gatewayUrl } from 'config';
 
 const ContractInfo = () => {
   const { address, account } = useGetAccountInfo();
@@ -43,6 +50,7 @@ const ContractInfo = () => {
   const [tokenId, setTokenId] = React.useState<string>();
   const [tokenPrice, setTokenPrice] = React.useState<number>();
   const [buyLimit, setBuyLimit] = React.useState<number>();
+  const [esdtBalance, setEsdtBalance] = React.useState<string>();
 
   const [newTokenPrice, setNewTokenPrice] = React.useState<number>();
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
@@ -100,6 +108,32 @@ const ContractInfo = () => {
         console.error('Unable to call VM query', err);
       });
   }, [hasPendingTransactions]);
+
+  React.useEffect(() => {
+    if (!tokenId) return;
+    console.log('tokenId', tokenId);
+    getEsdtBalance({
+      apiAddress: gatewayUrl,
+      address: account.address,
+      tokenId: tokenId,
+      timeout: 3000
+    }).then(({ data, success }) => {
+      console.log('success', success);
+      console.log('data', data);
+      if (success && !!data.tokenData) {
+        let decoded;
+        decoded = data.tokenData.balance;
+        decoded = Egld.raw(new BigNumber(decoded)).toDenominated();
+        decoded = parseFloat(decoded).toString();
+
+        const tokenSymbol = tokenId.split('-')[0];
+
+        decoded += ' ' + tokenSymbol;
+        console.log('decoded', decoded);
+        setEsdtBalance(decoded);
+      }
+    });
+  }, [tokenId]);
 
   const sendUpdatePriceTransaction = async (e: any) => {
     e.preventDefault();
@@ -175,7 +209,7 @@ const ContractInfo = () => {
     const functionName = 'deposit';
 
     // ESDTTransfer data args
-    // https://docs.elrond.com/developers/esdt-tokens/#transfers-to-a-smart-contract
+    // ref: https://docs.elrond.com/developers/esdt-tokens/#transfers-to-a-smart-contract
     const args = [
       BytesValue.fromUTF8(tokenId),
       new BigUIntValue(Balance.egld(depositAmount).valueOf()),
@@ -183,6 +217,8 @@ const ContractInfo = () => {
     ];
     const { argumentsString } = (new ArgSerializer()).valuesToString(args);
     const data = 'ESDTTransfer@' + argumentsString;
+
+    // const data = `ESDTTransfer@${stringToHex(tokenId)}@${decimalToHex(Balance.egld(depositAmount).valueOf())}@${stringToHex(functionName)}`;
 
     const tx = {
       value: '0',
@@ -222,9 +258,13 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Token Price:</span>
         <span data-testid='tokenPrice'> {tokenPrice} EGLD</span>
       </div>
-      <div className='mb-4'>
+      <div className='mb-1'>
         <span className='opacity-6 mr-1'>Buy Limit:</span>
         <span data-testid='buyLimit'> {buyLimit}</span>
+      </div>
+      <div className='mb-4'>
+        <span className='opacity-6 mr-1'>ESDT Balance:</span>
+        <span data-testid='esdtBalance'> {esdtBalance}</span>
       </div>
 
       <hr />

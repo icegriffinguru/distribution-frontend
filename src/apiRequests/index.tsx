@@ -40,3 +40,32 @@ const fetchTransactions = (url: string) =>
 
 export const getTransactions = fetchTransactions('/transactions');
 export const getTransactionsCount = fetchTransactions('/transactions/count');
+
+interface GetEsdtBalanceType {
+  apiAddress: string;
+  address: string;
+  tokenId: string;
+  timeout: number;
+}
+
+export const getEsdtBalance = async ({
+  apiAddress,
+  address,
+  tokenId,
+  timeout
+}: GetEsdtBalanceType) => {
+  try {
+    const { data } = await axios.get(`${apiAddress}/address/${address}/esdt/${tokenId}`, {
+      timeout
+    });
+
+    return {
+      data: data.data,
+      success: data !== undefined && data.code == 'successful'
+    };
+  } catch (err) {
+    return {
+      success: false
+    };
+  }
+};
