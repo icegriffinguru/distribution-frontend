@@ -222,13 +222,13 @@ const ContractInfo = () => {
 
     const tx = {
       value: '0',
-      data: data,
+      data: data,   // because of data, transaction modal do not disapper after completion of the transaction
       receiver: contractAddress
     };
 
     await refreshAccount();
 
-    const { sessionId /*, error*/ } = await sendTransactions({
+    const { sessionId , error } = await sendTransactions({
       transactions: tx,
       transactionsDisplayInfo: {
         processingMessage: 'Processing ' + functionName + ' transaction',
@@ -239,6 +239,38 @@ const ContractInfo = () => {
     });
     if (sessionId != null) {
       setTransactionSessionId(sessionId);
+    }
+    if (error) {
+      console.error('sendDepositTransaction', error);
+    }
+  };
+
+  const sendClaimTransaction = async (e: any) => {
+    e.preventDefault();
+    
+    const functionName = 'claim';
+
+    const tx = contract.call({
+      func: new ContractFunction(functionName),
+      gasLimit: new GasLimit(5000000)
+    });
+
+    await refreshAccount();
+
+    const { sessionId , error } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+    if (error) {
+      console.error('sendDepositTransaction', error);
     }
   };
 
@@ -284,6 +316,9 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Deposit Amount (In ESDT):</span>
         <input type="number" onChange={(e) => setDepositAmount(parseFloat(e.target.value))} />
         <button className='btn' onClick={sendDepositTransaction}>Send</button>
+      </div>
+      <div className='mb-1' >
+        <button className='btn' onClick={sendClaimTransaction}>Claim</button>
       </div>
     </div>
   );
