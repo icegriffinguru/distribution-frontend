@@ -20,7 +20,10 @@ import {
   Egld,
   GasLimit,
   BigUIntValue,
-  Balance
+  Balance,
+  BytesValue,
+  ArgSerializer,
+  TransactionPayload
 } from '@elrondnetwork/erdjs';
 import BigNumber from '@elrondnetwork/erdjs/node_modules/bignumber.js/bignumber.js';
 import { contractAddress } from 'config';
@@ -43,6 +46,7 @@ const ContractInfo = () => {
 
   const [newTokenPrice, setNewTokenPrice] = React.useState<number>();
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
+  const [depositAmount, setDepositAmount] = React.useState<number>();
 
   React.useEffect(() => {
     let query, decoded;
@@ -104,21 +108,21 @@ const ContractInfo = () => {
       return;
     }
 
+    const functionName = 'updatePrice';
     const tx = contract.call({
-      func: new ContractFunction('updatePrice'),
+      func: new ContractFunction(functionName),
       gasLimit: new GasLimit(5000000),
       args: [new BigUIntValue(Balance.egld(newTokenPrice).valueOf())]
     });
 
     await refreshAccount();
 
-    const txName = 'updatePrice';
     const { sessionId /*, error*/ } = await sendTransactions({
       transactions: tx,
       transactionsDisplayInfo: {
-        processingMessage: 'Processing ' + txName + ' transaction',
-        errorMessage: 'An error has occured during ' + txName,
-        successMessage: txName + ' transaction successful'
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
       },
       redirectAfterSign: false
     });
@@ -134,21 +138,66 @@ const ContractInfo = () => {
       return;
     }
 
+    const functionName = 'updateBuyLimit';
     const tx = contract.call({
-      func: new ContractFunction('updateBuyLimit'),
+      func: new ContractFunction(functionName),
       gasLimit: new GasLimit(5000000),
       args: [new BigUIntValue(new BigNumber(newBuyLimit))]
     });
 
     await refreshAccount();
 
-    const txName = 'updateBuyLimit';
     const { sessionId /*, error*/ } = await sendTransactions({
       transactions: tx,
       transactionsDisplayInfo: {
-        processingMessage: 'Processing ' + txName + ' transaction',
-        errorMessage: 'An error has occured during ' + txName,
-        successMessage: txName + ' transaction successful'
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
+  const sendDepositTransaction = async (e: any) => {
+    e.preventDefault();
+    if (!depositAmount){
+      alert('Deposit amount should be greater than 0.');
+      return;
+    }
+    if (!tokenId){
+      alert('Token Id is undefined.');
+      return;
+    }
+
+    const functionName = 'deposit';
+
+    // ESDTTransfer data args
+    // https://docs.elrond.com/developers/esdt-tokens/#transfers-to-a-smart-contract
+    const args = [
+      BytesValue.fromUTF8(tokenId),
+      new BigUIntValue(Balance.egld(depositAmount).valueOf()),
+      BytesValue.fromUTF8(functionName)
+    ];
+    const { argumentsString } = (new ArgSerializer()).valuesToString(args);
+    const data = 'ESDTTransfer@' + argumentsString;
+
+    const tx = {
+      value: '0',
+      data: data,
+      receiver: contractAddress
+    };
+
+    await refreshAccount();
+
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
       },
       redirectAfterSign: false
     });
@@ -177,6 +226,7 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Buy Limit:</span>
         <span data-testid='buyLimit'> {buyLimit}</span>
       </div>
+
       <hr />
       <div className='mb-1' >
         <span className='opacity-6 mr-1'>Price:</span>
@@ -187,6 +237,13 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Buy Limit:</span>
         <input type="number" onChange={(e) => setNewBuyLimit(parseFloat(e.target.value))} />
         <button className='btn' onClick={sendUpdateBuyLimitTransaction}>Update</button>
+      </div>
+
+      <hr />
+      <div className='mb-1' >
+        <span className='opacity-6 mr-1'>Deposit Amount (In ESDT):</span>
+        <input type="number" onChange={(e) => setDepositAmount(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendDepositTransaction}>Send</button>
       </div>
     </div>
   );
