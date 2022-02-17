@@ -55,6 +55,7 @@ const ContractInfo = () => {
   const [newTokenPrice, setNewTokenPrice] = React.useState<number>();
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
   const [depositAmount, setDepositAmount] = React.useState<number>();
+  const [claimDistributableAmount, setClaimDistributableAmount] = React.useState<number>();
 
   React.useEffect(() => {
     let query, decoded;
@@ -114,7 +115,7 @@ const ContractInfo = () => {
     console.log('tokenId', tokenId);
     getEsdtBalance({
       apiAddress: gatewayUrl,
-      address: account.address,
+      address: contractAddress,
       tokenId: tokenId,
       timeout: 3000
     }).then(({ data, success }) => {
@@ -133,7 +134,7 @@ const ContractInfo = () => {
         setEsdtBalance(decoded);
       }
     });
-  }, [tokenId]);
+  }, [hasPendingTransactions]);
 
   const sendUpdatePriceTransaction = async (e: any) => {
     e.preventDefault();
@@ -274,6 +275,36 @@ const ContractInfo = () => {
     }
   };
 
+  const sendClaimDistirbutableTransaction = async (e: any) => {
+    e.preventDefault();
+    if (claimDistributableAmount !== 0 && !claimDistributableAmount){
+      alert('claimDistributableAmount should be set.');
+      return;
+    }
+
+    const functionName = 'claimDistributable';
+    const tx = contract.call({
+      func: new ContractFunction(functionName),
+      gasLimit: new GasLimit(5000000),
+      args: [new BigUIntValue(Balance.egld(claimDistributableAmount).valueOf())]
+    });
+
+    await refreshAccount();
+
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
   return (
     <div className='text-white' data-testid='topInfo'>
       <hr />
@@ -319,6 +350,11 @@ const ContractInfo = () => {
       </div>
       <div className='mb-1' >
         <button className='btn' onClick={sendClaimTransaction}>Claim</button>
+      </div>
+      <div className='mb-1' >
+        <span className='opacity-6 mr-1'>Claim Distributable Amount (In ESDT):</span>
+        <input type="number" onChange={(e) => setClaimDistributableAmount(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendClaimDistirbutableTransaction}>Claim</button>
       </div>
     </div>
   );
