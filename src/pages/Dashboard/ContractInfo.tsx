@@ -57,6 +57,7 @@ const ContractInfo = () => {
   const [depositAmount, setDepositAmount] = React.useState<number>();
   const [claimDistributableAmount, setClaimDistributableAmount] = React.useState<number>();
   const [buyAmount, setBuyAmount] = React.useState<number>();
+  const [burnAmount, setBurnAmount] = React.useState<number>();
 
   React.useEffect(() => {
     let query, decoded;
@@ -135,7 +136,7 @@ const ContractInfo = () => {
         setEsdtBalance(decoded);
       }
     });
-  }, [hasPendingTransactions]);
+  }, [tokenId, hasPendingTransactions]);
 
   const sendUpdatePriceTransaction = async (e: any) => {
     e.preventDefault();
@@ -336,6 +337,78 @@ const ContractInfo = () => {
     }
   };
 
+  const sendBurnTransaction = async (e: any) => {
+    e.preventDefault();
+    if (!burnAmount || burnAmount <= 0){
+      alert('Burn amount shuould be greater than 0.');
+      return;
+    }
+
+    const functionName = 'burn';
+    const tx = contract.call({
+      func: new ContractFunction(functionName),
+      gasLimit: new GasLimit(5000000),
+      args: [new BigUIntValue(Balance.egld(burnAmount).valueOf())]
+    });
+
+    await refreshAccount();
+
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
+  const sendAllowLocalBurnTransaction = async (e: any) => {
+    e.preventDefault();
+    if (!tokenId){
+      alert('Token Id is undefined.');
+      return;
+    }
+
+    const functionName = 'sendAllowLocalBurnTransaction';
+
+    // setSpecialRole data args
+    // ref: https://docs.elrond.com/developers/esdt-tokens/#setting-and-unsetting-special-roles
+    const args = [
+      BytesValue.fromUTF8(tokenId),
+      new AddressValue(new Address(contractAddress)),
+      BytesValue.fromUTF8('ESDTRoleLocalBurn')
+    ];
+    const { argumentsString } = (new ArgSerializer()).valuesToString(args);
+    const data = 'setSpecialRole@' + argumentsString;
+
+    const EsdtManagerAddress = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzllls8a5w6u';
+    const tx = {
+      value: '0',
+      data: data,   // because of data, transaction modal do not disapper after completion of the transaction
+      receiver: EsdtManagerAddress
+    };
+
+    await refreshAccount();
+
+    const { sessionId , error } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
   return (
     <div className='text-white' data-testid='topInfo'>
       <hr />
@@ -382,10 +455,20 @@ const ContractInfo = () => {
       <div className='mb-1' >
         <button className='btn' onClick={sendClaimTransaction}>Claim</button>
       </div>
-      <div className='mb-1' >
+      <div className='mb-4' >
         <span className='opacity-6 mr-1'>Claim Distributable Amount (In ESDT):</span>
         <input type="number" onChange={(e) => setClaimDistributableAmount(parseFloat(e.target.value))} />
         <button className='btn' onClick={sendClaimDistirbutableTransaction}>Claim</button>
+      </div>
+
+      <hr />
+      <div className='mb-1' >
+        <button className='btn' onClick={sendAllowLocalBurnTransaction}>Allow Local Burn</button>
+      </div>
+      <div className='mb-4' >
+        <span className='opacity-6 mr-1'>Burn Amount:</span>
+        <input type="number" onChange={(e) => setBurnAmount(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendBurnTransaction}>Burn</button>
       </div>
 
       <hr />
