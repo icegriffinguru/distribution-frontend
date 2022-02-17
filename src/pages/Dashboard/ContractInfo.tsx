@@ -43,7 +43,7 @@ const ContractInfo = () => {
   const contract = new SmartContract({ address: new Address(contractAddress) });
   const { sendTransactions } = transactionServices;
 
-  console.log('network', network);
+  // console.log('network', network);
 
   const /*transactionSessionId*/ [, setTransactionSessionId] = React.useState<string | null>(null);
 
@@ -56,6 +56,7 @@ const ContractInfo = () => {
   const [newBuyLimit, setNewBuyLimit] = React.useState<number>();
   const [depositAmount, setDepositAmount] = React.useState<number>();
   const [claimDistributableAmount, setClaimDistributableAmount] = React.useState<number>();
+  const [buyAmount, setBuyAmount] = React.useState<number>();
 
   React.useEffect(() => {
     let query, decoded;
@@ -305,6 +306,36 @@ const ContractInfo = () => {
     }
   };
 
+  const sendBuyTransaction = async (e: any) => {
+    e.preventDefault();
+    if (!buyAmount || buyAmount <= 0){
+      alert('Buy Amount should be greater than 0.');
+      return;
+    }
+
+    const functionName = 'buy';
+    const tx = contract.call({
+      func: new ContractFunction(functionName),
+      gasLimit: new GasLimit(5000000),
+      value: Balance.egld(buyAmount)
+    });
+
+    await refreshAccount();
+
+    const { sessionId /*, error*/ } = await sendTransactions({
+      transactions: tx,
+      transactionsDisplayInfo: {
+        processingMessage: 'Processing ' + functionName + ' transaction',
+        errorMessage: 'An error has occured during ' + functionName,
+        successMessage: functionName + ' transaction successful'
+      },
+      redirectAfterSign: false
+    });
+    if (sessionId != null) {
+      setTransactionSessionId(sessionId);
+    }
+  };
+
   return (
     <div className='text-white' data-testid='topInfo'>
       <hr />
@@ -355,6 +386,13 @@ const ContractInfo = () => {
         <span className='opacity-6 mr-1'>Claim Distributable Amount (In ESDT):</span>
         <input type="number" onChange={(e) => setClaimDistributableAmount(parseFloat(e.target.value))} />
         <button className='btn' onClick={sendClaimDistirbutableTransaction}>Claim</button>
+      </div>
+
+      <hr />
+      <div className='mb-1' >
+        <span className='opacity-6 mr-1'>Buy Amount (In EGLD):</span>
+        <input type="number" onChange={(e) => setBuyAmount(parseFloat(e.target.value))} />
+        <button className='btn' onClick={sendBuyTransaction}>Buy</button>
       </div>
     </div>
   );
